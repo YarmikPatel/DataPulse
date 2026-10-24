@@ -27,12 +27,25 @@ class Config:
     # Sometimes cloud providers use `postgres://`, which SQLAlchemy 1.4+ rejects in favor of `postgresql://`
     raw_db_url = os.environ.get("DATABASE_URL", "").strip()
 
+    # if raw_db_url:
+    #     if raw_db_url.startswith("postgres://"):
+    #         SQLALCHEMY_DATABASE_URI = raw_db_url.replace("postgres://", "postgresql://", 1)
+    #     else:
+    #         SQLALCHEMY_DATABASE_URI = raw_db_url
+    #     IS_SUPABASE_CONFIGURED = True
+    
     if raw_db_url:
         if raw_db_url.startswith("postgres://"):
-            SQLALCHEMY_DATABASE_URI = raw_db_url.replace("postgres://", "postgresql://", 1)
-        else:
-            SQLALCHEMY_DATABASE_URI = raw_db_url
+            raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
+
+        if raw_db_url.startswith("postgresql://"):
+            raw_db_url = raw_db_url.replace(
+                "postgresql://", "postgresql+psycopg2://", 1
+            )
+
+        SQLALCHEMY_DATABASE_URI = raw_db_url
         IS_SUPABASE_CONFIGURED = True
+
     else:
         # Graceful fallback to local SQLite for offline development before Supabase is connected
         local_db_path = BASE_DIR / "datapulse_local.db"
