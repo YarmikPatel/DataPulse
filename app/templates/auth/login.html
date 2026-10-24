@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4 py-md-5">
+    <div class="col-sm-10 col-md-7 col-lg-5 col-xl-4">
+        <div class="card card-workspace p-4 p-md-4">
+            <div class="mb-4">
+                <span class="badge badge-forest mb-2">Platform Access</span>
+                <h1 class="h4 mb-1">Welcome Back</h1>
+                <p class="text-secondary small mb-0">Sign in to your DataPulse monitoring workspace.</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input 
+                        type="email" 
+                        class="form-control form-editorial" 
+                        id="email" 
+                        name="email" 
+                        placeholder="analyst@example.com" 
+                        value="{{ email or '' }}" 
+                        required 
+                        autofocus
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label for="password" class="form-label mb-0">Password</label>
+                    </div>
+                    <input 
+                        type="password" 
+                        class="form-control form-editorial mt-1" 
+                        id="password" 
+                        name="password" 
+                        placeholder="••••••••" 
+                        required
+                    >
+                </div>
+
+                <div class="mb-4 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label text-secondary small" for="remember">Remember this session</label>
+                </div>
+
+                <button type="submit" class="btn btn-forest w-100 py-2">
+                    Sign In to Workspace
+                </button>
+            </form>
+
+            <hr class="my-4" style="border-color: var(--dp-border-subtle);">
+
+            <div class="text-center">
+                <span class="text-secondary small">Do not have an account?</span>
+                <a href="{{ url_for('auth.register') }}" class="text-decoration-none fw-semibold ms-1 small" style="color: var(--dp-forest);">
+                    Create account
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

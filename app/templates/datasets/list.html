@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}My Datasets{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-end pb-3 mb-4 border-bottom"
+     style="border-color: var(--dp-border) !important;">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge badge-forest">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Dataset Library
+            </span>
+        </div>
+        <h1 class="h3 mb-1">My Datasets</h1>
+        <p class="text-secondary small mb-0">
+            All CSV files you have uploaded — click a filename to view its profiling report.
+        </p>
+    </div>
+    <div class="mt-3 mt-md-0">
+        <a href="{{ url_for('datasets.upload') }}" class="btn btn-forest btn-sm">
+            <i class="bi bi-cloud-upload me-1"></i>Upload New CSV
+        </a>
+    </div>
+</div>
+
+{% if datasets %}
+<!-- Dataset Table -->
+<div class="card card-workspace">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Uploaded Datasets</span>
+        <span class="badge badge-neutral">{{ datasets | length }} total</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-editorial">
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Rows</th>
+                        <th>Columns</th>
+                        <th>Size</th>
+                        <th>Health Score</th>
+                        <th>Uploaded</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ds in datasets %}
+                    <tr>
+                        <!-- Filename links to the profiling report -->
+                        <td>
+                            <a href="{{ url_for('datasets.view_profile', dataset_id=ds.id) }}"
+                               class="text-decoration-none fw-semibold"
+                               style="color: var(--dp-forest);">
+                                <i class="bi bi-file-earmark-text me-1"></i>{{ ds.filename }}
+                            </a>
+                            {% if ds.filename != ds.original_filename %}
+                                <div class="text-muted small">Original: {{ ds.original_filename }}</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ "{:,}".format(ds.row_count) }}</td>
+                        <td>{{ ds.column_count }}</td>
+                        <td>
+                            {% set kb = (ds.file_size_bytes / 1024) | round(1) %}
+                            {% if kb < 1024 %}
+                                {{ kb }} KB
+                            {% else %}
+                                {{ (kb / 1024) | round(2) }} MB
+                            {% endif %}
+                        </td>
+                        <!-- Health score badge with colour coding -->
+                        <td>
+                            {% set report = ds.profiling_reports | sort(attribute='created_at') | last %}
+                            {% if report %}
+                                {% set score = report.overall_health_score | float %}
+                                {% if score >= 80 %}
+                                    <span class="badge badge-forest">{{ score }}%</span>
+                                {% elif score >= 50 %}
+                                    <span class="badge badge-neutral">{{ score }}%</span>
+                                {% else %}
+                                    <span class="badge badge-terracotta">{{ score }}%</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary small">
+                            {{ ds.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('datasets.view_profile', dataset_id=ds.id) }}"
+                                   class="btn btn-forest-outline btn-sm">
+                                    <i class="bi bi-bar-chart me-1"></i>Profile
+                                </a>
+                                <!-- Delete uses a POST form to avoid CSRF issues with DELETE links -->
+                                <form method="POST"
+                                      action="{{ url_for('datasets.delete_dataset', dataset_id=ds.id) }}"
+                                      onsubmit="return confirm('Delete {{ ds.filename }}? This cannot be undone.');"
+                                      class="d-inline m-0 p-0">
+                                    <button type="submit" class="btn btn-terracotta-outline btn-sm">
+                                        <i class="bi bi-trash me-1"></i>Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="card card-workspace">
+    <div class="card-body text-center py-5 px-3">
+        <div class="text-muted mb-3">
+            <i class="bi bi-file-earmark-spreadsheet fs-1"
+               style="color: var(--dp-text-muted);"></i>
+        </div>
+        <h5 class="mb-2">No datasets yet</h5>
+        <p class="text-secondary small mb-4" style="max-width: 420px; margin: 0 auto;">
+            Upload your first CSV file to get started. DataPulse will automatically
+            profile your data and calculate a quality score.
+        </p>
+        <a href="{{ url_for('datasets.upload') }}" class="btn btn-forest">
+            <i class="bi bi-cloud-upload me-1"></i>Upload Your First CSV
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

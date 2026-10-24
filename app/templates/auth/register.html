@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4 py-md-5">
+    <div class="col-sm-10 col-md-7 col-lg-5 col-xl-4">
+        <div class="card card-workspace p-4 p-md-4">
+            <div class="mb-4">
+                <span class="badge badge-forest mb-2">New Profile</span>
+                <h1 class="h4 mb-1">Create an Account</h1>
+                <p class="text-secondary small mb-0">Register a profile to manage datasets and pipeline runs.</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.register') }}">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input 
+                        type="text" 
+                        class="form-control form-editorial" 
+                        id="username" 
+                        name="username" 
+                        placeholder="e.g. data_analyst" 
+                        value="{{ username or '' }}" 
+                        required 
+                        autofocus
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input 
+                        type="email" 
+                        class="form-control form-editorial" 
+                        id="email" 
+                        name="email" 
+                        placeholder="analyst@example.com" 
+                        value="{{ email or '' }}" 
+                        required
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input 
+                        type="password" 
+                        class="form-control form-editorial" 
+                        id="password" 
+                        name="password" 
+                        placeholder="At least 6 characters" 
+                        required
+                        minlength="6"
+                    >
+                </div>
+
+                <div class="mb-4">
+                    <label for="confirm_password" class="form-label">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        class="form-control form-editorial" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        placeholder="Re-enter password" 
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-forest w-100 py-2">
+                    Create Workspace Account
+                </button>
+            </form>
+
+            <hr class="my-4" style="border-color: var(--dp-border-subtle);">
+
+            <div class="text-center">
+                <span class="text-secondary small">Already registered?</span>
+                <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-semibold ms-1 small" style="color: var(--dp-forest);">
+                    Sign in here
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

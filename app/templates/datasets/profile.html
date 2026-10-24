@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — {{ dataset.filename }}{% endblock %}
+
+{% block content %}
+
+{# Grab the profiling dict stored in the JSON field #}
+{% set profile = report.summary_stats %}
+
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-end pb-3 mb-4 border-bottom"
+     style="border-color: var(--dp-border) !important;">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge badge-forest">
+                <i class="bi bi-bar-chart me-1"></i>Profiling Report
+            </span>
+            {# Health score badge with traffic-light colours #}
+            {% set score = report.overall_health_score | float %}
+            {% if score >= 80 %}
+                <span class="badge badge-forest">Health: {{ score }}%</span>
+            {% elif score >= 50 %}
+                <span class="badge badge-neutral">Health: {{ score }}%</span>
+            {% else %}
+                <span class="badge badge-terracotta">Health: {{ score }}%</span>
+            {% endif %}
+        </div>
+        <h1 class="h3 mb-1" style="word-break: break-all;">
+            <i class="bi bi-file-earmark-text me-2"
+               style="color: var(--dp-forest);"></i>{{ dataset.filename }}
+        </h1>
+        <p class="text-secondary small mb-0">
+            Uploaded {{ dataset.created_at.strftime('%Y-%m-%d at %H:%M UTC') }} ·
+            {{ "{:,}".format(dataset.row_count) }} rows ·
+            {{ dataset.column_count }} columns ·
+            {% set kb = (dataset.file_size_bytes / 1024) | round(1) %}
+            {% if kb < 1024 %}{{ kb }} KB{% else %}{{ (kb / 1024) | round(2) }} MB{% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2 mt-3 mt-md-0">
+        <a href="{{ url_for('datasets.list_datasets') }}"
+           class="btn btn-forest-outline btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>All Datasets
+        </a>
+        <form method="POST"
+              action="{{ url_for('datasets.delete_dataset', dataset_id=dataset.id) }}"
+              onsubmit="return confirm('Delete {{ dataset.filename }}? This cannot be undone.');"
+              class="d-inline m-0 p-0">
+            <button type="submit" class="btn btn-terracotta-outline btn-sm">
+                <i class="bi bi-trash me-1"></i>Delete
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ----------------------------------------------------------------
+     Row 1 — Four Summary KPI Stat Blocks
+     ---------------------------------------------------------------- -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Total Rows</div>
+            <div class="stat-value">{{ "{:,}".format(profile.row_count) }}</div>
+            <div class="stat-subtext">Data records in file</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Total Columns</div>
+            <div class="stat-value">{{ profile.column_count }}</div>
+            <div class="stat-subtext">Features / attributes</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Missing Cells</div>
+            <div class="stat-value"
+                 style="color: {% if report.missing_cells_total > 0 %}var(--dp-terracotta){% else %}var(--dp-forest){% endif %};">
+                {{ "{:,}".format(report.missing_cells_total) }}
+            </div>
+            <div class="stat-subtext">
+                {% set total_cells = profile.row_count * profile.column_count %}
+                {% if total_cells > 0 %}
+                    {{ ((report.missing_cells_total / total_cells) * 100) | round(2) }}% of all cells
+                {% else %}
+                    No data
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Duplicate Rows</div>
+            <div class="stat-value"
+                 style="color: {% if report.duplicate_rows_total > 0 %}var(--dp-terracotta){% else %}var(--dp-forest){% endif %};">
+                {{ "{:,}".format(report.duplicate_rows_total) }}
+            </div>
+            <div class="stat-subtext">
+                {% if profile.row_count > 0 %}
+                    {{ ((report.duplicate_rows_total / profile.row_count) * 100) | round(2) }}% of rows
+                {% else %}
+                    No rows
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ----------------------------------------------------------------
+     Row 2 — Health Score Gauge Card + Column Summary Table
+     ---------------------------------------------------------------- -->
+<div class="row g-4 mb-4">
+
+    <!-- Health Score Visual -->
+    <div class="col-lg-4">
+        <div class="card card-workspace h-100">
+            <div class="card-header">
+                <i class="bi bi-heart-pulse me-2" style="color: var(--dp-forest);"></i>
+                Data Health Score
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+
+                <!-- Circular progress ring (pure CSS / SVG, no dependencies) -->
+                <div class="position-relative mb-3"
+                     style="width: 140px; height: 140px;"
+                     title="Health Score: {{ score }}%"
+                     aria-label="Health Score {{ score }} out of 100">
+                    <svg viewBox="0 0 36 36" style="width:140px; height:140px; transform:rotate(-90deg);">
+                        <!-- Track circle -->
+                        <circle cx="18" cy="18" r="15.9"
+                                fill="none"
+                                stroke="var(--dp-bg-muted)"
+                                stroke-width="2.5"></circle>
+                        <!-- Progress circle — stroke-dasharray is (score/100 * circumference, remainder) -->
+                        {# circumference of r=15.9 ≈ 99.9 #}
+                        {% set circumference = 99.9 %}
+                        {% set dash = (score / 100 * circumference) | round(2) %}
+                        {% set gap  = (circumference - dash) | round(2) %}
+                        <circle cx="18" cy="18" r="15.9"
+                                fill="none"
+                                stroke="{% if score >= 80 %}var(--dp-forest){% elif score >= 50 %}#c9822a{% else %}var(--dp-terracotta){% endif %}"
+                                stroke-width="2.5"
+                                stroke-dasharray="{{ dash }} {{ gap }}"
+                                stroke-linecap="round"></circle>
+                    </svg>
+                    <!-- Score number centred inside the ring -->
+                    <div class="position-absolute top-50 start-50 translate-middle text-center"
+                         style="transform: translate(-50%,-50%) rotate(0deg) !important;">
+                        <div style="font-size:1.9rem; font-weight:700;
+                                    color: {% if score >= 80 %}var(--dp-forest){% elif score >= 50 %}#c9822a{% else %}var(--dp-terracotta){% endif %};">
+                            {{ score | round | int }}
+                        </div>
+                        <div class="text-muted" style="font-size:0.7rem; font-weight:600;
+                                                       text-transform:uppercase; letter-spacing:0.05em;">
+                            / 100
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Score label -->
+                <div class="text-center">
+                    {% if score >= 80 %}
+                        <span class="badge badge-forest fs-6 px-3">Excellent Quality</span>
+                    {% elif score >= 60 %}
+                        <span class="badge badge-forest fs-6 px-3">Good Quality</span>
+                    {% elif score >= 40 %}
+                        <span class="badge badge-neutral fs-6 px-3">Fair Quality</span>
+                    {% else %}
+                        <span class="badge badge-terracotta fs-6 px-3">Needs Attention</span>
+                    {% endif %}
+                </div>
+
+                <!-- Score breakdown -->
+                <div class="mt-4 w-100 small text-secondary">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Completeness (40%)</span>
+                        {% set total_cells = profile.row_count * profile.column_count %}
+                        {% if total_cells > 0 %}
+                            {% set comp = ((1 - report.missing_cells_total / total_cells) * 100) | round(1) %}
+                        {% else %}
+                            {% set comp = 100.0 %}
+                        {% endif %}
+                        <span class="fw-semibold">{{ comp }}%</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Uniqueness (35%)</span>
+                        {% if profile.row_count > 0 %}
+                            {% set uniq = ((1 - report.duplicate_rows_total / profile.row_count) * 100) | round(1) %}
+                        {% else %}
+                            {% set uniq = 100.0 %}
+                        {% endif %}
+                        <span class="fw-semibold">{{ uniq }}%</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Validity (25%)</span>
+                        <span class="fw-semibold text-muted">100% <span class="badge badge-neutral" style="font-size:0.65rem;">Phase 5</span></span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Statistics Table -->
+    <div class="col-lg-8">
+        <div class="card card-workspace h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-table me-2" style="color: var(--dp-forest);"></i>
+                    Column Statistics
+                </span>
+                <span class="badge badge-neutral">{{ profile.column_count }} columns</span>
+            </div>
+            <div class="card-body p-0">
+                {% if profile.columns %}
+                <div class="table-responsive">
+                    <table class="table table-editorial mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Column Name</th>
+                                <th>Data Type</th>
+                                <th>Missing Values</th>
+                                <th>Missing %</th>
+                                <th>Completeness</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col in profile.columns %}
+                            <tr>
+                                <td class="text-muted small">{{ loop.index }}</td>
+                                <td>
+                                    <strong style="font-family: ui-monospace, 'Cascadia Code', monospace;
+                                                   font-size: 0.85em;">
+                                        {{ col.name }}
+                                    </strong>
+                                </td>
+                                <td>
+                                    <!-- Friendly dtype badge -->
+                                    {% set dtype = col.dtype %}
+                                    {% if 'int' in dtype %}
+                                        <span class="badge badge-forest">integer</span>
+                                    {% elif 'float' in dtype %}
+                                        <span class="badge badge-forest">float</span>
+                                    {% elif 'bool' in dtype %}
+                                        <span class="badge badge-neutral">boolean</span>
+                                    {% elif 'datetime' in dtype %}
+                                        <span class="badge badge-neutral">datetime</span>
+                                    {% else %}
+                                        <span class="badge badge-neutral">text</span>
+                                    {% endif %}
+                                    <span class="text-muted small ms-1">({{ dtype }})</span>
+                                </td>
+                                <td>{{ "{:,}".format(col.missing_count) }}</td>
+                                <td>
+                                    {% if col.missing_pct > 0 %}
+                                        <span style="color: var(--dp-terracotta);">{{ col.missing_pct }}%</span>
+                                    {% else %}
+                                        <span style="color: var(--dp-forest);">0%</span>
+                                    {% endif %}
+                                </td>
+                                <!-- Mini completeness bar -->
+                                <td style="min-width: 120px;">
+                                    {% set completeness_pct = (100 - col.missing_pct) | round(1) %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="flex-grow-1 rounded"
+                                             style="height: 6px; background-color: var(--dp-bg-muted);">
+                                            <div class="rounded"
+                                                 style="height:6px; width:{{ completeness_pct }}%;
+                                                        background-color: {% if completeness_pct >= 80 %}var(--dp-forest){% elif completeness_pct >= 50 %}#c9822a{% else %}var(--dp-terracotta){% endif %};
+                                                        transition: width 0.4s ease;">
+                                            </div>
+                                        </div>
+                                        <span class="small text-muted"
+                                              style="min-width:38px; text-align:right;">{{ completeness_pct }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted small">
+                    No column statistics available.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div><!-- end row 2 -->
+
+<!-- ----------------------------------------------------------------
+     Row 3 — Issues Summary Card
+     ---------------------------------------------------------------- -->
+{% if report.missing_cells_total > 0 or report.duplicate_rows_total > 0 %}
+<div class="card card-workspace mb-4">
+    <div class="card-header">
+        <i class="bi bi-exclamation-triangle me-2" style="color: var(--dp-terracotta);"></i>
+        Data Quality Issues Found
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% if report.missing_cells_total > 0 %}
+            <div class="col-md-6">
+                <div class="p-3 rounded"
+                     style="background-color: var(--dp-danger-bg);
+                            border: 1px solid var(--dp-terracotta-border);">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-dash-circle mt-1" style="color: var(--dp-terracotta);"></i>
+                        <div>
+                            <div class="fw-semibold small"
+                                 style="color: var(--dp-terracotta);">
+                                {{ "{:,}".format(report.missing_cells_total) }} Missing Values
+                            </div>
+                            <div class="text-secondary small mt-1">
+                                Columns with missing data:
+                                {% set missing_cols = profile.columns | selectattr("missing_count", "gt", 0) | list %}
+                                <strong>{{ missing_cols | map(attribute="name") | join(", ") }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if report.duplicate_rows_total > 0 %}
+            <div class="col-md-6">
+                <div class="p-3 rounded"
+                     style="background-color: var(--dp-warning-bg);
+                            border: 1px solid #e5c98d;">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-copy mt-1" style="color: #c9822a;"></i>
+                        <div>
+                            <div class="fw-semibold small" style="color: #8c5d1e;">
+                                {{ "{:,}".format(report.duplicate_rows_total) }} Duplicate Rows
+                            </div>
+                            <div class="text-secondary small mt-1">
+                                These rows are exact copies of other rows in the dataset.
+                                The cleaning pipeline (Phase 5) can remove them automatically.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- All Clear Banner -->
+<div class="alert alert-editorial alert-editorial-success d-flex align-items-center mb-4">
+    <i class="bi bi-check-circle-fill me-3 fs-5"></i>
+    <div>
+        <strong>No issues detected.</strong>
+        This dataset has no missing values and no duplicate rows — it is ready for analysis.
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

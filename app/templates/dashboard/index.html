@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Editorial Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-end pb-3 mb-4 border-bottom" style="border-color: var(--dp-border) !important;">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge badge-forest">Workspace Active</span>
+            {% if is_supabase %}
+                <span class="badge badge-forest">
+                    <i class="bi bi-cloud-check me-1"></i>Supabase PostgreSQL
+                </span>
+            {% else %}
+                <span class="badge badge-terracotta" title="Configure DATABASE_URL in .env to switch to cloud">
+                    <i class="bi bi-hdd me-1"></i>Local SQLite Fallback
+                </span>
+            {% endif %}
+        </div>
+        <h1 class="h3 mb-1">Pipeline & Quality Control Center</h1>
+        <p class="text-secondary small mb-0">
+            Account: <strong>{{ user.username }}</strong> &lt;{{ user.email }}&gt; · Real-time pipeline operations
+        </p>
+    </div>
+    <div class="mt-3 mt-md-0">
+        <span class="text-secondary small">DataPulse Architecture · MCA Project</span>
+    </div>
+</div>
+
+<!-- 4 Key Metric Blocks -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Datasets Ingested</div>
+            <div class="stat-value">{{ total_datasets }}</div>
+            <div class="stat-subtext">Stored directly in database</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Pipeline Executions</div>
+            <div class="stat-value">{{ total_runs }}</div>
+            <div class="stat-subtext">Historical cleaning cycles</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Successful Runs</div>
+            <div class="stat-value" style="color: var(--dp-forest);">{{ successful_runs }}</div>
+            <div class="stat-subtext">Zero fatal validation breaks</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-block">
+            <div class="stat-label">Audit Mirror</div>
+            <div class="stat-value" style="font-size: 1.35rem; padding-top: 0.35rem; color: var(--dp-terracotta);">Ready</div>
+            <div class="stat-subtext">Google Sheets sync pipeline</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Workspace Body -->
+<div class="row g-4 mb-4">
+    <!-- Primary Panel: Ingested Datasets Table -->
+    <div class="col-lg-8">
+        <div class="card card-workspace h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Ingested Datasets</span>
+                <a href="{{ url_for('datasets.upload') }}" class="btn btn-forest btn-sm">
+                    <i class="bi bi-cloud-upload me-1"></i>Upload CSV
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_datasets %}
+                    <div class="table-responsive">
+                        <table class="table table-editorial">
+                            <thead>
+                                <tr>
+                                    <th>Filename</th>
+                                    <th>Records</th>
+                                    <th>Features</th>
+                                    <th>Ingested</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ds in recent_datasets %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('datasets.view_profile', dataset_id=ds.id) }}"
+                                               class="text-decoration-none fw-semibold"
+                                               style="color: var(--dp-forest);">
+                                                {{ ds.filename }}
+                                            </a>
+                                        </td>
+                                        <td>{{ ds.row_count }}</td>
+                                        <td>{{ ds.column_count }}</td>
+                                        <td>{{ ds.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 px-3">
+                        <div class="text-muted mb-2">
+                            <i class="bi bi-file-earmark-spreadsheet fs-1" style="color: var(--dp-text-muted);"></i>
+                        </div>
+                        <h6 class="text-secondary mb-1">No datasets ingested yet</h6>
+                        <p class="text-muted small mb-3" style="max-width: 420px; margin: 0 auto;">
+                            Upload a CSV file to automatically profile your data, detect missing values,
+                            and compute a quality score.
+                        </p>
+                        <a href="{{ url_for('datasets.upload') }}" class="btn btn-forest btn-sm">
+                            <i class="bi bi-cloud-upload me-1"></i>Upload CSV Dataset
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Panel: Pipeline Architecture & Operations Roadmap -->
+    <div class="col-lg-4">
+        <div class="card card-workspace h-100">
+            <div class="card-header">
+                Pipeline Lifecycle Stages
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 rounded border" style="background-color: var(--dp-bg-canvas); border-color: var(--dp-border) !important;">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong class="small text-dark">1. Audit Trail Engine</strong>
+                            <span class="badge badge-neutral">Phase 4</span>
+                        </div>
+                        <p class="text-secondary small mb-0">
+                            Durable events logged in Supabase first, then synced asynchronously to Google Sheets.
+                        </p>
+                    </div>
+
+                    <div class="p-3 rounded border" style="background-color: var(--dp-bg-canvas); border-color: var(--dp-border) !important;">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong class="small text-dark">2. Dataset Profiling</strong>
+                            <span class="badge badge-forest">Active: Phase 3</span>
+                        </div>
+                        <p class="text-secondary small mb-0">
+                            Missing value metrics, duplicate detection, cardinality, and quality score calculation.
+                        </p>
+                    </div>
+
+                    <div class="p-3 rounded border" style="background-color: var(--dp-bg-canvas); border-color: var(--dp-border) !important;">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong class="small text-dark">3. Cleaning & Export</strong>
+                            <span class="badge badge-neutral">Phase 5</span>
+                        </div>
+                        <p class="text-secondary small mb-0">
+                            Imputation rules, deduplication, error anomaly reporting, and streaming downloads.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables & secrets (NEVER commit secrets!)
+.env
+.env.local
+*.pem
+credentials.json
+*service_account*.json
+
+# Local databases & uploads
+*.db
+*.sqlite
+*.sqlite3
+instance/
+uploads/
+scratch/
+
+# Vercel deployment cache
+.vercel/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo

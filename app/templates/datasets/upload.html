@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Upload CSV{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-end pb-3 mb-4 border-bottom"
+     style="border-color: var(--dp-border) !important;">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge badge-forest">
+                <i class="bi bi-cloud-upload me-1"></i>Upload
+            </span>
+        </div>
+        <h1 class="h3 mb-1">Upload CSV Dataset</h1>
+        <p class="text-secondary small mb-0">
+            Choose a CSV file to upload. DataPulse will profile it instantly using Pandas.
+        </p>
+    </div>
+    <div class="mt-3 mt-md-0">
+        <a href="{{ url_for('datasets.list_datasets') }}"
+           class="btn btn-forest-outline btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>My Datasets
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-xl-6">
+
+        <!-- Upload Card -->
+        <div class="card card-workspace">
+            <div class="card-header">
+                <i class="bi bi-file-earmark-spreadsheet me-2"
+                   style="color: var(--dp-forest);"></i>Select a CSV File
+            </div>
+            <div class="card-body p-4">
+
+                <form method="POST"
+                      action="{{ url_for('datasets.upload') }}"
+                      enctype="multipart/form-data"
+                      id="uploadForm"
+                      novalidate>
+
+                    <!-- Drop Zone -->
+                    <div id="dropZone"
+                         class="rounded border text-center py-5 px-3 mb-4"
+                         style="border: 2px dashed var(--dp-border-dark) !important;
+                                background-color: var(--dp-bg-subtle);
+                                cursor: pointer;
+                                transition: border-color 0.15s ease, background-color 0.15s ease;">
+
+                        <i class="bi bi-upload fs-2 mb-2 d-block"
+                           style="color: var(--dp-text-muted);"></i>
+                        <p class="mb-1 fw-semibold" style="color: var(--dp-text-secondary);">
+                            Drag &amp; drop your CSV here
+                        </p>
+                        <p class="text-muted small mb-3">or</p>
+
+                        <!-- Hidden real file input -->
+                        <input type="file"
+                               name="csv_file"
+                               id="csvFileInput"
+                               accept=".csv"
+                               class="d-none"
+                               required>
+
+                        <!-- Visible button that triggers the input -->
+                        <button type="button"
+                                onclick="document.getElementById('csvFileInput').click()"
+                                class="btn btn-forest-outline btn-sm">
+                            <i class="bi bi-folder2-open me-1"></i>Browse Files
+                        </button>
+                    </div>
+
+                    <!-- Selected file name display -->
+                    <div id="fileInfo"
+                         class="mb-4 p-3 rounded"
+                         style="background-color: var(--dp-forest-light);
+                                border: 1px solid var(--dp-forest-border);
+                                display: none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-check"
+                               style="color: var(--dp-forest);"></i>
+                            <span id="selectedFileName"
+                                  class="small fw-semibold"
+                                  style="color: var(--dp-forest-dark);"></span>
+                            <span id="selectedFileSize"
+                                  class="small text-muted ms-auto"></span>
+                        </div>
+                    </div>
+
+                    <!-- Upload Guidelines -->
+                    <ul class="small text-secondary mb-4 ps-3">
+                        <li>Only <strong>.csv</strong> files are accepted.</li>
+                        <li>Maximum file size: <strong>16 MB</strong>.</li>
+                        <li>The first row must be a header row (column names).</li>
+                        <li>Uploaded files are stored securely in the database.</li>
+                    </ul>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit"
+                                id="submitBtn"
+                                class="btn btn-forest"
+                                disabled>
+                            <i class="bi bi-cloud-upload me-2"></i>Upload &amp; Profile
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div><!-- end card -->
+
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+/*
+ * Upload Page — file selection, drag-and-drop, and client-side size validation.
+ * All actual security validation is also enforced server-side.
+ */
+(function () {
+    const MAX_SIZE_BYTES = 16 * 1024 * 1024; // 16 MB
+    const dropZone      = document.getElementById("dropZone");
+    const fileInput     = document.getElementById("csvFileInput");
+    const fileInfo      = document.getElementById("fileInfo");
+    const selectedName  = document.getElementById("selectedFileName");
+    const selectedSize  = document.getElementById("selectedFileSize");
+    const submitBtn     = document.getElementById("submitBtn");
+
+    /* Format bytes into KB / MB for display */
+    function formatBytes(bytes) {
+        if (bytes < 1024)       return bytes + " B";
+        if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / 1048576).toFixed(2) + " MB";
+    }
+
+    /* Update the UI with the chosen file details */
+    function showFileInfo(file) {
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith(".csv")) {
+            alert("Only .csv files are accepted. Please choose a CSV file.");
+            fileInput.value = "";
+            return;
+        }
+        if (file.size > MAX_SIZE_BYTES) {
+            alert("File exceeds the 16 MB size limit. Please choose a smaller file.");
+            fileInput.value = "";
+            return;
+        }
+        selectedName.textContent = file.name;
+        selectedSize.textContent = formatBytes(file.size);
+        fileInfo.style.display  = "block";
+        submitBtn.disabled       = false;
+    }
+
+    /* Native file-input change */
+    fileInput.addEventListener("change", function () {
+        if (this.files && this.files[0]) {
+            showFileInfo(this.files[0]);
+        }
+    });
+
+    /* Drag-and-drop: visual feedback */
+    dropZone.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        this.style.borderColor      = "var(--dp-forest)";
+        this.style.backgroundColor  = "var(--dp-forest-light)";
+    });
+    dropZone.addEventListener("dragleave", function () {
+        this.style.borderColor      = "var(--dp-border-dark)";
+        this.style.backgroundColor  = "var(--dp-bg-subtle)";
+    });
+    dropZone.addEventListener("drop", function (e) {
+        e.preventDefault();
+        this.style.borderColor      = "var(--dp-border-dark)";
+        this.style.backgroundColor  = "var(--dp-bg-subtle)";
+        const files = e.dataTransfer.files;
+        if (files && files[0]) {
+            // Push the dragged file into the file input for form submission
+            const dt = new DataTransfer();
+            dt.items.add(files[0]);
+            fileInput.files = dt.files;
+            showFileInfo(files[0]);
+        }
+    });
+
+    /* Show loading state on submit to prevent double-clicks */
+    document.getElementById("uploadForm").addEventListener("submit", function () {
+        submitBtn.disabled     = true;
+        submitBtn.innerHTML    = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Uploading & Profiling…';
+    });
+})();
+</script>
+{% endblock %}
